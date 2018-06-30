@@ -3,86 +3,76 @@
 namespace AppBundle\Controller;
 
 use AppBundle\Entity\Customer;
+use AppBundle\Entity\Product;
 use AppBundle\Entity\Transaction;
 use AppBundle\Form\CustomerType;
+use AppBundle\Service\Payment;
 use Buzz\Browser;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Method;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\HttpFoundation\Response;
 
 class DefaultController extends Controller
 {
-    const url          = 'https://homologation.lydia-app.com';
-    const vendor_token = '58385365be57f651843810';
-
     /**
-     * @Route("/", name="homepage")
-     * @Method({"GET", "POST"})
+     * @Route("/", name="app_homepage")
+     * @Method("GET")
      *
-     * @param Request $request
-     *
-     * @return \Symfony\Component\HttpFoundation\Response
+     * @return Response
      */
-    public function indexAction(Request $request)
+    public function indexAction()
     {
-        $customer = new Customer();
-        $form     = $this->createForm(CustomerType::class, $customer);
-        $d        = null;
-        $form->handleRequest($request);
-
-        if ($form->isValid() && $form->isSubmitted()) {
-            $em       = $this->getDoctrine()
-                             ->getManager()
-            ;
-            $customer = $em->getRepository(Customer::class)
-                           ->findOrCreate($customer)
-            ;
-
-            $transaction = new Transaction();
-            $transaction->setCustomer($customer)
-                        ->setAmount(15.99)
-                        ->setCurrency('EUR')
-                        ->setType('email')
-            ;
-            $em->persist($transaction);
-            $em->flush();
-
-            $client = new Browser();
-            $data   = [
-                'vendor_token'        => self::vendor_token,
-                'recipient'           => $customer->getEmail(),
-                'amount'              => 15.99,
-                'currency'            => 'EUR',
-                'type'                => 'email',
-                'threeDSecure'        => 'no',
-                'browser_success_url' => $this->generateUrl('transaction_success', ['id' => $transaction->getId()], UrlGeneratorInterface::ABSOLUTE_URL),
-                'browser_fail_url'    => $this->generateUrl('transaction_failed', ['id' => $transaction->getId()], UrlGeneratorInterface::ABSOLUTE_URL),
-            ];
-
-            $resp = $client->post(self::url . '/api/request/do.json', [], http_build_query($data));
-            $d    = json_decode($resp->getBody());
-
-            $transaction->setRequestId($d->request_id)
-                        ->setRequestUuid($d->request_uuid)
-            ;
-            $em->flush();
-        }
+        $em       = $this->getDoctrine()->getManager();
+        $products = $em->getRepository(Product::class)->findAll();
 
         return $this->render('default/index.html.twig', [
-            'form' => $form->createView(),
-            'd'    => $d,
+            'products' => $products,
         ]);
     }
 
     /**
-     * @Route("/success/{id}", name="transaction_success")
+     * @Route("/{id}/order", name="app_order")
+     * @Method({"GET", "POST"})
+     *
+     * @param Request $request
+     * @param Product $product
+     *
+     * @return Response
+     */
+    public function orderAction(Request $request, Product $product)
+    {
+        $customer = new Customer();
+        $form     = $this->createForm(CustomerType::class, $customer);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $em = $this->getDoctrine()->getManager();
+            $customer = $em->getRepository(Customer::class)->findOrCreate($customer);
+
+            try {
+                $transaction = $this->get(Payment::class)->createRequest($customer, $product);
+
+                return $this->redirect($transaction->getRedirectUrl());
+            } catch (\Exception $e) {
+                $this->addFlash('error', 'Une erreur est survenue lors de la création de votre commande.');
+            }
+        }
+
+        return $this->render('default/order.html.twig', [
+            'product' => $product,
+            'form'    => $form->createView(),
+        ]);
+    }
+
+    /**
+     * @Route("/success/{id}", name="app_transaction_success")
      * @Method({"GET", "POST"})
      *
      * @param Transaction $transaction
      *
-     * @return \Symfony\Component\HttpFoundation\Response
+     * @return Response
      */
     public function successAction(Transaction $transaction)
     {
@@ -92,12 +82,12 @@ class DefaultController extends Controller
     }
 
     /**
-     * @Route("/failed/{id}", name="transaction_failed")
+     * @Route("/failed/{id}", name="app_transaction_failed")
      * @Method({"GET", "POST"})
      *
      * @param Transaction $transaction
      *
-     * @return \Symfony\Component\HttpFoundation\Response
+     * @return Response
      */
     public function failAction(Transaction $transaction)
     {
@@ -112,14 +102,12 @@ class DefaultController extends Controller
      */
     public function listAction()
     {
-        $client = new Browser();
-        $resp   = $client->post(self::url . '/api/transaction/list.json', [], http_build_query([
-            'vendor_token' => self::vendor_token,
-            'startDate'    => '2018-06-06 00:00:00',
-            'endDate'      => '2018-07-07 00:00:00',
-        ]));
+        $em = $this->getDoctrine()->getManager();
+        $transactions = $em->getRepository(Transaction::class)->findAll();
 
-        return $this->render('default/list.html.twig', ['requests' => [],]);
+        return $this->render('default/list.html.twig', [
+            'transaction' => $transactions,
+        ]);
     }
 }
 

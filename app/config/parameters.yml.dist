@@ -17,3 +17,7 @@ parameters:
 
     # A secret key that's used to generate certain security-related tokens
     secret: ThisTokenIsNotSoSecretChangeIt
+
+    lydia_public_token: "xxx"
+    lydia_private_token: "xxx"
+    api_url: "https://homologation.lydia-app.com"

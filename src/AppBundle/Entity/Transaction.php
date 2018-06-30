@@ -85,6 +85,12 @@ class Transaction
     private $status = TransactionStatus::PENDING;
 
     /**
+     * @var string
+     * @ORM\Column(type="string", name="redirect_url", nullable=true)
+     */
+    private $redirectUrl;
+
+    /**
      * @var Customer
      * @ORM\ManyToOne(targetEntity="AppBundle\Entity\Customer")
      * @ORM\JoinColumn(nullable=false)
@@ -336,6 +342,26 @@ class Transaction
         if (TransactionStatus::exists($status)) {
             $this->status = $status;
         }
+
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getRedirectUrl()
+    {
+        return $this->redirectUrl;
+    }
+
+    /**
+     * @param string $redirectUrl
+     *
+     * @return Transaction
+     */
+    public function setRedirectUrl($redirectUrl)
+    {
+        $this->redirectUrl = $redirectUrl;
 
         return $this;
     }

@@ -6,14 +6,14 @@ use AppBundle\Entity\Customer;
 use AppBundle\Entity\Product;
 use AppBundle\Entity\Transaction;
 use Buzz\Browser;
-use Doctrine\ORM\EntityManager;
+use Doctrine\Common\Persistence\ObjectManager;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Routing\RouterInterface;
 
 class Payment
 {
     /**
-     * @var EntityManager
+     * @var ObjectManager
      */
     private $em;
 
@@ -40,12 +40,13 @@ class Payment
     /**
      * Payment constructor.
      *
-     * @param EntityManager $em
-     * @param Browser       $buzz
-     * @param string        $apiUrl
-     * @param string        $vendorToken
+     * @param ObjectManager   $em
+     * @param RouterInterface $router
+     * @param Browser         $buzz
+     * @param string          $apiUrl
+     * @param string          $vendorToken
      */
-    public function __construct(EntityManager $em, RouterInterface $router, Browser $buzz, $apiUrl, $vendorToken)
+    public function __construct(ObjectManager $em, RouterInterface $router, Browser $buzz, $apiUrl, $vendorToken)
     {
         $this->em          = $em;
         $this->router      = $router;
@@ -67,22 +68,23 @@ class Payment
     public function createRequest(Customer $customer, Product $product)
     {
         $transaction = $this->createTransaction($customer, $product);
-        $data        = [
+        $query       = [
             'vendor_token'        => $this->vendorToken,
             'recipient'           => $customer->getEmail(),
             'amount'              => $transaction->getAmount(),
             'currency'            => $transaction->getCurrency(),
             'type'                => $transaction->getType(),
             'threeDSecure'        => 'no',
-            'browser_success_url' => $this->router->generate('transaction_success', ['id' => $transaction->getId()], UrlGeneratorInterface::ABSOLUTE_URL),
-            'browser_fail_url'    => $this->router->generate('transaction_failed', ['id' => $transaction->getId()], UrlGeneratorInterface::ABSOLUTE_URL),
+            'browser_success_url' => $this->router->generate('app_transaction_success', ['id' => $transaction->getId()], UrlGeneratorInterface::ABSOLUTE_URL),
+            'browser_fail_url'    => $this->router->generate('app_transaction_failed', ['id' => $transaction->getId()], UrlGeneratorInterface::ABSOLUTE_URL),
         ];
-        $resp        = $this->buzz->post($this->apiUrl . '/api/request/do.json', [], http_build_query($data));
-        $d           = json_decode($resp->getBody());
 
-        $transaction->setRequestId($d->request_id)
-                    ->setRequestUuid($d->request_uuid)
-        ;
+        $resp = $this->buzz->post($this->apiUrl . '/api/request/do.json', [], http_build_query($query));
+        $body = json_decode($resp->getBody());
+
+        $transaction->setRequestId($body->request_id)->setRequestUuid($body->request_uuid)
+                    ->setRedirectUrl($body->mobile_url);
+
         $this->em->flush();
 
         return $transaction;
@@ -100,11 +102,7 @@ class Payment
     private function createTransaction(Customer $customer, Product $product)
     {
         $transaction = new Transaction();
-        $transaction->setType('email')
-                    ->setCustomer($customer)
-                    ->setAmount($product->getPrice())
-                    ->setCurrency('EUR')
-        ;
+        $transaction->setType('email')->setCustomer($customer)->setAmount($product->getPrice())->setCurrency('EUR');
 
         $this->em->persist($transaction);
         $this->em->flush();
