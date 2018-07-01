@@ -27,6 +27,7 @@ class CustomerType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Customer::class,
+            'csrf_protection' => false,
         ]);
     }
 
@@ -35,7 +36,7 @@ class CustomerType extends AbstractType
      */
     public function getBlockPrefix()
     {
-        return 'appbundle_customer';
+        return 'customer';
     }
 
 

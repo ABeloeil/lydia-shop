@@ -75,8 +75,21 @@ class Payment
             'currency'            => $transaction->getCurrency(),
             'type'                => $transaction->getType(),
             'threeDSecure'        => 'no',
-            'browser_success_url' => $this->router->generate('app_transaction_success', ['id' => $transaction->getId()], UrlGeneratorInterface::ABSOLUTE_URL),
-            'browser_fail_url'    => $this->router->generate('app_transaction_failed', ['id' => $transaction->getId()], UrlGeneratorInterface::ABSOLUTE_URL),
+            'browser_success_url' => $this->router->generate('app_shop', [
+                'path' => "order/{$transaction->getId()}/success",
+            ], UrlGeneratorInterface::ABSOLUTE_URL),
+            'browser_fail_url'    => $this->router->generate('app_shop', [
+                'path' => "order/{$transaction->getId()}/failed",
+            ], UrlGeneratorInterface::ABSOLUTE_URL),
+            'confirm_url'         => $this->router->generate('put_transaction_success', [
+                'transaction' => $transaction->getId(),
+            ], UrlGeneratorInterface::ABSOLUTE_URL),
+            'cancel_url'          => $this->router->generate('put_transaction_failed', [
+                'transaction' => $transaction->getId(),
+            ], UrlGeneratorInterface::ABSOLUTE_URL),
+            'expire_url'          => $this->router->generate('put_transaction_expired', [
+                'transaction' => $transaction->getId(),
+            ], UrlGeneratorInterface::ABSOLUTE_URL),
         ];
 
         $resp = $this->buzz->post($this->apiUrl . '/api/request/do.json', [], http_build_query($query));
