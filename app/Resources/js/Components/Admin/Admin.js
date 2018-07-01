@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dimmer, Loader, Table, Button } from 'semantic-ui-react';
+import { Dimmer, Loader, Table, Button, Popup } from 'semantic-ui-react';
 import { Link } from 'react-router-dom';
 
 export default class Admin extends React.Component {
@@ -60,7 +60,13 @@ export default class Admin extends React.Component {
                 transactions.map(transaction => (
                   <Table.Row key={transaction.id}>
                     <Table.Cell>{transaction.id}</Table.Cell>
-                    <Table.Cell>{transaction.customer.email}</Table.Cell>
+                    <Table.Cell>
+                      <Popup trigger={<span>{transaction.customer.email}</span>}>
+                        <Popup.Header>
+                          {transaction.customer.first_name} {transaction.customer.last_name}
+                        </Popup.Header>
+                      </Popup>
+                    </Table.Cell>
                     <Table.Cell>{transaction.amount} €</Table.Cell>
                     <Table.Cell>{transaction.status}</Table.Cell>
                   </Table.Row>
