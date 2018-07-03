@@ -81,5 +81,17 @@ bin/console doctrine:schema:update -f
 bin/console doctrine:fixtures:load -n
 ```
 
+## 6 . File permissions
+
+Allow cache and logs to be write in /var (linux)
+
+```bash
+ HTTPDUSER=$(ps axo user,comm | grep -E '[a]pache|[h]ttpd|[_]www|[w]ww-data|[n]ginx' | grep -v root | head -1 | cut -d\  -f1)
+
+ sudo setfacl -dR -m u:"$HTTPDUSER":rwX -m u:$(whoami):rwX var
+ sudo setfacl -R -m u:"$HTTPDUSER":rwX -m u:$(whoami):rwX var
+ ```
+
+For file permissions on other os, please [Symfony documentation](https://symfony.com/doc/3.4/setup/file_permissions.html)
 
 After all those steps you can enjoy your shop !
