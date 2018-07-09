@@ -4,7 +4,6 @@ module.exports = {
   mode: 'development',
   entry: './app/Resources/js/shop.js',
   devtool: 'source-map',
-  watch: true,
   output: {
     filename: 'shop.js',
     path: path.resolve(__dirname, 'web', 'js'),

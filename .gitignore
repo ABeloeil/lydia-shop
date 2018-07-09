@@ -16,6 +16,4 @@
 /vendor/
 /node_modules/
 /web/bundles/
-/web/js/*
-!/web/js/.gitkeep
 .vscode
